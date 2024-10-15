@@ -18,6 +18,8 @@ from torch.utils.data import (
     DataLoader,
 )  # Gives easier dataset managment by creating mini batches etc.
 from tqdm import tqdm  # For a nice progress bar!
+import matplotlib.pyplot as plt
+import pandas as pd
 
 # Set device
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -54,6 +56,8 @@ class RNN_LSTM(nn.Module):
 
         # Decode the hidden state of the last time step
         out = self.fc(out)
+        print(f"X is {x.shape}");
+        print(f"Out is {out}");
         return out
 
 
