@@ -23,7 +23,7 @@ hidden_size = 256
 num_layers = 1
 num_classes = 7
 learning_rate = 0.001
-num_epochs = 180
+num_epochs = 1
 
 # creating rnn lstm model
 class LSTM(nn.Module):
