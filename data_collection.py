@@ -66,6 +66,8 @@ with open('emg_data.csv', 'w', newline='') as csvfile:
         print("Data collection stopped manually.")
     finally:
         features = calculate_features(data_buffer)
+        mean = np.mean(features)
+        features = features - mean # Centers data around mean
         print("Features calculated:", features)  # Debug: Confirm feature calculation
         writer.writerow(features)  # Write features to CSV
         data_buffer = []  # Clear buffer after processing
