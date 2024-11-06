@@ -3,34 +3,20 @@ import csv
 import numpy as np
 
 def calculate_features(data):
-    # Standard deviation
-    std_dev = np.std(data)
+    # Split data into 8 electrodes, each with 10 values (features)
+    electrode_data = np.reshape(data, (8, 10))
     
-    # Root mean square (RMS)
-    rms = np.sqrt(np.mean(np.square(data)))
-    
-    # Minimum and maximum values
-    min_value = np.min(data)
-    max_value = np.max(data)
-    
-    # Zero crossings (number of times signal crosses zero)
-    zero_crossings = np.sum(np.diff(np.sign(data)) != 0)
-    
-    # Average amplitude change (average of absolute differences between consecutive values)
-    avg_amp_change = np.mean(np.abs(np.diff(data)))
-    
-    # Amplitude of first burst (max value within first quarter of data)
-    amp_first_burst = np.max(data[:len(data) // 4])
-    
-    # Mean absolute value
-    mean_abs_value = np.mean(np.abs(data))
-    
-    # Waveform length (sum of absolute differences between consecutive data points)
-    wave_form_length = np.sum(np.abs(np.diff(data)))
-    
-    # Willison amplitude (number of times consecutive differences exceed a threshold)
-    threshold = 0.1 * np.max(np.abs(data))  # Example threshold: 10% of max amplitude
-    willison_amp = np.sum(np.abs(np.diff(data)) > threshold)
+    # Extract each feature across the electrodes
+    std_dev = electrode_data[:, 0].mean()
+    rms = electrode_data[:, 1].mean()
+    min_value = electrode_data[:, 2].min()
+    max_value = electrode_data[:, 3].max()
+    zero_crossings = electrode_data[:, 4].sum()
+    avg_amp_change = electrode_data[:, 5].mean()
+    amp_first_burst = electrode_data[:, 6].max()
+    mean_abs_value = electrode_data[:, 7].mean()
+    wave_form_length = electrode_data[:, 8].sum()
+    willison_amp = electrode_data[:, 9].sum()
     
     return {
         'std_dev': std_dev,
@@ -46,20 +32,25 @@ def calculate_features(data):
     }
 
 # Configure serial port
-ser = serial.Serial('COM3', 9600)  # we change com3 to our port on the arduino
+ser = serial.Serial('COM3', 9600)  # Replace 'COM3' with your Arduino's port
 
-# Open CSV file (it'll create it if it doesn't exist)
+# Open CSV file
 with open('emg_data.csv', 'w', newline='') as csvfile:
-    fieldnames = ['std_dev', 'rms', 'min', 'max', 'zero_crossings', 'avg_amp_change', 'amp_first_burst', 'mean_abs_value', 'wave_form_length', 'willison_amp']
+    fieldnames = ['std_dev', 'rms', 'min', 'max', 'zero_crossings', 'avg_amp_change', 'amp_first_burst', 'mean_abs_value', 'wave_form_length', 'willison_amp', 'label']
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
 
     while True:
         data_buffer = []
-        for _ in range(100):  # Adjust window size as needed
+        for _ in range(80):  # Read 80 data points to match the structure of 8 electrodes with 10 features
             data = ser.readline().decode().strip()
-            data_buffer.append(int(data))
+            data_buffer.append(float(data))
         
-        # Calculate all features and write to CSV
+        # Calculate features from the data
         features = calculate_features(data_buffer)
+        
+        # Assign a label if needed; replace '0' with actual labels if they are available
+        features['label'] = 0
+        
+        # Write to CSV
         writer.writerow(features)
