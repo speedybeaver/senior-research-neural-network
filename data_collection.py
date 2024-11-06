@@ -1,23 +1,26 @@
 import serial
 import csv
 import numpy as np
+import time
 
+# Parameters
+SERIAL_PORT = 'COM3'   # Replace with the correct port
+BAUD_RATE = 9600       # Match with your Arduino code
+DURATION = 5          # Duration in seconds to collect data
+
+# Function to calculate features
 def calculate_features(data):
-    # Split data into 8 electrodes, each with 10 values (features)
-    electrode_data = np.reshape(data, (8, 10))
-    
-    # Extract each feature across the electrodes
-    std_dev = electrode_data[:, 0].mean()
-    rms = electrode_data[:, 1].mean()
-    min_value = electrode_data[:, 2].min()
-    max_value = electrode_data[:, 3].max()
-    zero_crossings = electrode_data[:, 4].sum()
-    avg_amp_change = electrode_data[:, 5].mean()
-    amp_first_burst = electrode_data[:, 6].max()
-    mean_abs_value = electrode_data[:, 7].mean()
-    wave_form_length = electrode_data[:, 8].sum()
-    willison_amp = electrode_data[:, 9].sum()
-    
+    std_dev = np.std(data)
+    rms = np.sqrt(np.mean(np.square(data)))
+    min_value = np.min(data)
+    max_value = np.max(data)
+    zero_crossings = np.sum(np.diff(np.sign(data)) != 0)
+    avg_amp_change = np.mean(np.abs(np.diff(data)))
+    amp_first_burst = data[0]
+    mean_abs_value = np.mean(np.abs(data))
+    wave_form_length = np.sum(np.abs(np.diff(data)))
+    willison_amp = np.sum(np.abs(np.diff(data)) > 0.1)  # Threshold of 0.1
+
     return {
         'std_dev': std_dev,
         'rms': rms,
@@ -32,25 +35,40 @@ def calculate_features(data):
     }
 
 # Configure serial port
-ser = serial.Serial('COM3', 9600)  # Replace 'COM3' with your Arduino's port
+ser = serial.Serial(SERIAL_PORT, BAUD_RATE)
+time.sleep(2)  # Give time for the serial connection to establish
 
-# Open CSV file
+# Open CSV file for writing
 with open('emg_data.csv', 'w', newline='') as csvfile:
-    fieldnames = ['std_dev', 'rms', 'min', 'max', 'zero_crossings', 'avg_amp_change', 'amp_first_burst', 'mean_abs_value', 'wave_form_length', 'willison_amp', 'label']
+    fieldnames = ['std_dev', 'rms', 'min', 'max', 'zero_crossings', 
+                  'avg_amp_change', 'amp_first_burst', 'mean_abs_value', 
+                  'wave_form_length', 'willison_amp']
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
 
-    while True:
-        data_buffer = []
-        for _ in range(80):  # Read 80 data points to match the structure of 8 electrodes with 10 features
-            data = ser.readline().decode().strip()
-            data_buffer.append(float(data))
-        
-        # Calculate features from the data
+    data_buffer = []
+    start_time = time.time()
+    
+    try:
+        while time.time() - start_time < DURATION:
+            # Read data from serial
+            if ser.in_waiting > 0:
+                line = ser.readline().decode().strip()
+                try:
+                    value = float(line)  # Convert the reading to an integer
+                    data_buffer.append(value)
+                    data_buffer.append(value)
+                    print("Current buffer length:", len(data_buffer))  # Debug: check buffer length
+                except ValueError:
+                    # Skip lines that cannot be converted to an integer
+                    continue
+    except KeyboardInterrupt:
+        print("Data collection stopped manually.")
+    finally:
         features = calculate_features(data_buffer)
-        
-        # Assign a label if needed; replace '0' with actual labels if they are available
-        features['label'] = 0
-        
-        # Write to CSV
-        writer.writerow(features)
+        print("Features calculated:", features)  # Debug: Confirm feature calculation
+        writer.writerow(features)  # Write features to CSV
+        data_buffer = []  # Clear buffer after processing
+        ser.close()  # Ensure the serial connection is closed
+
+print("Data collection complete. CSV file created.")
