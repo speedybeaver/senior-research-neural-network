@@ -7,6 +7,7 @@ import time
 SERIAL_PORT = 'COM3'   # Replace with the correct port
 BAUD_RATE = 9600       # Match with your Arduino code
 DURATION = 5          # Duration in seconds to collect data
+CLASSIFICATION = 3    # Update what type of trial you're running
 
 # Function to calculate features
 def calculate_features(data):
@@ -65,6 +66,9 @@ with open('emg_data.csv', 'w', newline='') as csvfile:
     except KeyboardInterrupt:
         print("Data collection stopped manually.")
     finally:
+        # data_buffer around its mean
+        # calculate data buffer mean then subtract that from each term
+
         features = calculate_features(data_buffer)
         mean = np.mean(features)
         features = features - mean # Centers data around mean
