@@ -19,7 +19,7 @@ from scipy import stats
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Hyperparameters
-input_size = 130
+input_size = 20
 hidden_size = 256
 num_layers = 2
 num_classes = 7
@@ -30,7 +30,9 @@ outlier_threshold = 3
 
 def detect_outliers(data):
     z_scores = np.abs(stats.zscore(data))
-    outliers = np.where(z_scores > outlier_threshold)[0]
+    outliers = z_scores > outlier_threshold
+    print(outliers)
+    print(len(outliers))
     return outliers
 
 # creating rnn lstm model
@@ -68,7 +70,7 @@ model = LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_laye
 dfPath = r"C:/Users/Team 818/Documents/GitHub/senior-research-neural-network/online_dataset_training_values.csv"
 df = pd.read_csv(dfPath)
 
-localdfPath = "C:/Users/Team 818/Documents/GitHub/senior-research-neural-network/emg_data.csv"
+localdfPath = "C:/Users/Team 818/Documents/GitHub/senior-research-neural-network/emg_data_classified.csv"
 localdf = pd.read_csv(localdfPath)
 
 # preparing data for training
@@ -84,12 +86,12 @@ X_train, X_test, y_train, y_test = train_test_split(dataLocal, classLocal, test_
 # _, x_localtest, _, y_localtest = train_test_split(dataLocal, classLocal, test_size=1.00, random_state=41)
 
 outliers = detect_outliers(X_train)
-X_train = X_train.iloc[~outliers]
-y_train = y_train.iloc[~outliers]  # Filter labels corresponding to non-outliers
+X_train = X_train.loc[~outliers]
+y_train = y_train.loc[~outliers]  # Filter labels corresponding to non-outliers
 
 outliers = detect_outliers(X_test)
-X_test = X_test.iloc[~outliers]
-y_test = y_test.iloc[~outliers]  # Filter labels corresponding to non-outliers
+X_test = X_test.loc[~outliers]
+y_test = y_test.loc[~outliers]  # Filter labels corresponding to non-outliers
 
 SC = StandardScaler()
 X_train = pd.DataFrame(SC.fit_transform(X_train))
