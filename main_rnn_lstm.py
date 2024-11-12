@@ -13,17 +13,25 @@ from torch.utils.data import (
     DataLoader,
     TensorDataset
 )  # Gives easier dataset managment by creating mini batches etc.
+from scipy import stats
 
 # Set device
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Hyperparameters
-input_size = 80
+input_size = 130
 hidden_size = 256
-num_layers = 1
+num_layers = 2
 num_classes = 7
-learning_rate = 0.001
-num_epochs = 1
+learning_rate = 0.002
+num_epochs = 10
+# Outlier detection threshold (adjust as needed)
+outlier_threshold = 3
+
+def detect_outliers(data):
+    z_scores = np.abs(stats.zscore(data))
+    outliers = np.where(z_scores > outlier_threshold)[0]
+    return outliers
 
 # creating rnn lstm model
 class LSTM(nn.Module):
@@ -54,41 +62,60 @@ torch.manual_seed(41)
 model = LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, num_classes=num_classes).to(device)
 
 # getting path and reading the csv file for ALL inputs
-path = kagglehub.dataset_download("nccvector/electromyography-emg-dataset")
-dfPath = path + r"/Electro-Myography-EMG-Dataset/extracted_features_and_labeled_dataset(easiest to work with)/emg_all_features_labeled.csv"
-rawPath = path + r"/Electro-Myography-EMG-Dataset/raw_emg_data_unprocessed/index_finger_motion_raw.csv"
+# path = kagglehub.dataset_download("nccvector/electromyography-emg-dataset")
+# dfPath = path + r"/Electro-Myography-EMG-Dataset/extracted_features_and_labeled_dataset(easiest to work with)/emg_all_features_labeled.csv"
+
+dfPath = r"C:/Users/Team 818/Documents/GitHub/senior-research-neural-network/online_dataset_training_values.csv"
 df = pd.read_csv(dfPath)
+
+localdfPath = "C:/Users/Team 818/Documents/GitHub/senior-research-neural-network/emg_data.csv"
+localdf = pd.read_csv(localdfPath)
 
 # preparing data for training
 
-X = df.drop("1.2", axis=1) # training data
-y = df["1.2"] # correct classifcations
+dataOnline = df.drop("classification", axis=1) # training data
+classOnline = df["classification"] # correct classifcations
+
+dataLocal = localdf.drop("classification", axis=1)
+classLocal = localdf["classification"]
 
 # splitting up the data set
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=41)
+X_train, X_test, y_train, y_test = train_test_split(dataLocal, classLocal, test_size=0.10, random_state=41)
+# _, x_localtest, _, y_localtest = train_test_split(dataLocal, classLocal, test_size=1.00, random_state=41)
+
+outliers = detect_outliers(X_train)
+X_train = X_train.iloc[~outliers]
+y_train = y_train.iloc[~outliers]  # Filter labels corresponding to non-outliers
+
+outliers = detect_outliers(X_test)
+X_test = X_test.iloc[~outliers]
+y_test = y_test.iloc[~outliers]  # Filter labels corresponding to non-outliers
 
 SC = StandardScaler()
 X_train = pd.DataFrame(SC.fit_transform(X_train))
 X_test = pd.DataFrame(SC.transform(X_test))
+#x_localtest = pd.DataFrame(SC.transform(dataLocal))
 
 X_train = torch.tensor(X_train.values).float().to(device)
 X_test = torch.tensor(X_test.values).float().to(device)
+#x_localtest = torch.tensor(x_localtest.values).float().to(device)
 
 y_train = torch.LongTensor(y_train.values).to(device)-1
 y_test = torch.LongTensor(y_test.values).to(device)-1
+#y_localtest = torch.LongTensor(classLocal.values).to(device)-1
 
 # intializing them as torch datasets
 train_dataset = TensorDataset(X_train, y_train)
 test_dataset = TensorDataset(X_test, y_test)
+#localtest_dataset = TensorDataset(x_localtest, y_localtest)
 
 train_data = DataLoader(train_dataset, batch_size=1)
 test_data = DataLoader(test_dataset, batch_size=1)
+#localtest_data = DataLoader(localtest_dataset, batch_size=1)
 
 # set criterion, optimizer, and learning rate
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
-# training the network
 
 
 def train():
@@ -133,6 +160,6 @@ def check_accuracy(dataset):
     # Toggle model back to train
     return num_correct / num_samples
 
-
 train()
-print(f"Accuracy on test set: {check_accuracy(test_data)*100:.2f}")
+print(f"Accuracy on online test set: {check_accuracy(test_data)*100:.2f}")
+#print(f"Accuracy on local test set: {check_accuracy(localtest_data)*100:.2f}")
