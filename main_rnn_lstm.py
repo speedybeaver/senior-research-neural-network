@@ -18,21 +18,23 @@ from scipy import stats
 # Set device
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
+losses = []
+pred = []
+correct = []
+
 # Hyperparameters
 input_size = 20
 hidden_size = 512
 num_layers = 2
 num_classes = 7
 learning_rate = 0.002
-num_epochs = 200
+num_epochs = 500
 # Outlier detection threshold (adjust as needed)
 outlier_threshold = 3
 
 def detect_outliers(data):
     z_scores = np.abs(stats.zscore(data))
     outliers = z_scores > outlier_threshold
-    print(outliers)
-    print(len(outliers))
     return outliers
 
 # creating rnn lstm model
@@ -87,7 +89,6 @@ X_train, X_test, y_train, y_test = train_test_split(dataLocal, classLocal, test_
 
 outliers = detect_outliers(X_train)
 mask = ~outliers.any(axis=1)
-print(mask)
 X_train = X_train.loc[mask]
 y_train = y_train.loc[mask]  # Filter labels corresponding to non-outliers
 
@@ -124,9 +125,8 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 
 def train():
-    losses = []
     for epoch in range(num_epochs):
-        print(f'Epoch: {epoch}')
+        print(f'Epoch: {epoch+1}')
         for batch, (data, targets) in enumerate(tqdm(train_data)):
             # Get data to cuda if possible
             data = data.to(device=device)
@@ -144,7 +144,6 @@ def train():
             loss.backward()
             optimizer.step()
     
-
 def check_accuracy(dataset):
     num_correct = 0
     num_samples = 0
@@ -159,6 +158,10 @@ def check_accuracy(dataset):
 
             scores = model(data)
             _, predictions = scores.max(1)
+
+            pred.append(predictions.cpu().item())
+            correct.append(targets.cpu().item())
+
             num_correct += (predictions == targets).sum()
             num_samples += predictions.size(0)
 
@@ -166,5 +169,12 @@ def check_accuracy(dataset):
     return num_correct / num_samples
 
 train()
-print(f"Accuracy on online test set: {check_accuracy(test_data)*100:.2f}")
-#print(f"Accuracy on local test set: {check_accuracy(localtest_data)*100:.2f}")
+
+print(f"Accuracy on online test set: {check_accuracy(test_data)*100:.4f}")
+plt.plot(losses)
+plt.xlabel("Epoch (#)")
+plt.ylabel("Loss")
+plt.show()
+
+df = pd.DataFrame({'Predictions': pred, "Targets": correct})
+print(df)
