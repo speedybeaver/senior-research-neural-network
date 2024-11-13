@@ -24,7 +24,7 @@ hidden_size = 512
 num_layers = 2
 num_classes = 7
 learning_rate = 0.002
-num_epochs = 200
+num_epochs = 4
 # Outlier detection threshold (adjust as needed)
 outlier_threshold = 3
 
@@ -82,19 +82,18 @@ dataLocal = localdf.drop("classification", axis=1)
 classLocal = localdf["classification"]
 
 # splitting up the data set
-X_train, X_test, y_train, y_test = train_test_split(dataLocal, classLocal, test_size=0.10, random_state=41)
+# X_train, X_test, y_train, y_test = train_test_split(dataLocal, classLocal, test_size=0.10, random_state=41)
 # _, x_localtest, _, y_localtest = train_test_split(dataLocal, classLocal, test_size=1.00, random_state=41)
 
-outliers = detect_outliers(X_train)
+outliers = detect_outliers(dataOnline)
 mask = ~outliers.any(axis=1)
-print(mask)
-X_train = X_train.loc[mask]
-y_train = y_train.loc[mask]  # Filter labels corresponding to non-outliers
+X_train = dataOnline.loc[mask]
+y_train = classOnline.loc[mask]  # Filter labels corresponding to non-outliers
 
-outliers = detect_outliers(X_test)
+outliers = detect_outliers(dataLocal)
 mask = ~outliers.any(axis=1)
-X_test = X_test.loc[mask]
-y_test = y_test.loc[mask]  # Filter labels corresponding to non-outliers
+X_test = dataLocal.loc[mask]
+y_test = classLocal.loc[mask]  # Filter labels corresponding to non-outliers
 
 SC = StandardScaler()
 X_train = pd.DataFrame(SC.fit_transform(X_train))
@@ -126,7 +125,7 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 def train():
     losses = []
     for epoch in range(num_epochs):
-        print(f'Epoch: {epoch}')
+        print(f'Epoch: {epoch+1}')
         for batch, (data, targets) in enumerate(tqdm(train_data)):
             # Get data to cuda if possible
             data = data.to(device=device)
