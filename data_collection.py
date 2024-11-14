@@ -12,7 +12,7 @@ BAUD_RATE = 9600        # Ensure this matches your Arduino's baud rate
 DURATION = 5            # Duration in seconds to collect data
 CLASSIFICATIONS = [1,2,3,4,5,6,7]      # Set the classification label for the current trial
 NAMES = ["Index", "Middle", "Ring", "Pinky", "Thumb", "Rest", "Victory"]
-NUM_TRIALS = 15;
+NUM_TRIALS = 10;
 
 # Function to calculate features for a single channel
 def calculate_features(data):
