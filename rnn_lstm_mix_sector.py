@@ -18,23 +18,21 @@ from scipy import stats
 # Set device
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-losses = []
-pred = []
-correct = []
-
 # Hyperparameters
 input_size = 20
 hidden_size = 512
 num_layers = 2
 num_classes = 7
 learning_rate = 0.002
-num_epochs = 500
+num_epochs = 4
 # Outlier detection threshold (adjust as needed)
 outlier_threshold = 3
 
 def detect_outliers(data):
     z_scores = np.abs(stats.zscore(data))
     outliers = z_scores > outlier_threshold
+    print(outliers)
+    print(len(outliers))
     return outliers
 
 # creating rnn lstm model
@@ -84,18 +82,18 @@ dataLocal = localdf.drop("classification", axis=1)
 classLocal = localdf["classification"]
 
 # splitting up the data set
-X_train, X_test, y_train, y_test = train_test_split(dataLocal, classLocal, test_size=0.10, random_state=41)
+# X_train, X_test, y_train, y_test = train_test_split(dataLocal, classLocal, test_size=0.10, random_state=41)
 # _, x_localtest, _, y_localtest = train_test_split(dataLocal, classLocal, test_size=1.00, random_state=41)
 
-outliers = detect_outliers(X_train)
+outliers = detect_outliers(dataOnline)
 mask = ~outliers.any(axis=1)
-X_train = X_train.loc[mask]
-y_train = y_train.loc[mask]  # Filter labels corresponding to non-outliers
+X_train = dataOnline.loc[mask]
+y_train = classOnline.loc[mask]  # Filter labels corresponding to non-outliers
 
-outliers = detect_outliers(X_test)
+outliers = detect_outliers(dataLocal)
 mask = ~outliers.any(axis=1)
-X_test = X_test.loc[mask]
-y_test = y_test.loc[mask]  # Filter labels corresponding to non-outliers
+X_test = dataLocal.loc[mask]
+y_test = classLocal.loc[mask]  # Filter labels corresponding to non-outliers
 
 SC = StandardScaler()
 X_train = pd.DataFrame(SC.fit_transform(X_train))
@@ -125,6 +123,7 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 
 def train():
+    losses = []
     for epoch in range(num_epochs):
         print(f'Epoch: {epoch+1}')
         for batch, (data, targets) in enumerate(tqdm(train_data)):
@@ -144,6 +143,7 @@ def train():
             loss.backward()
             optimizer.step()
     
+
 def check_accuracy(dataset):
     num_correct = 0
     num_samples = 0
@@ -158,10 +158,6 @@ def check_accuracy(dataset):
 
             scores = model(data)
             _, predictions = scores.max(1)
-
-            pred.append(predictions.cpu().item())
-            correct.append(targets.cpu().item())
-
             num_correct += (predictions == targets).sum()
             num_samples += predictions.size(0)
 
@@ -169,12 +165,5 @@ def check_accuracy(dataset):
     return num_correct / num_samples
 
 train()
-
-print(f"Accuracy on online test set: {check_accuracy(test_data)*100:.4f}")
-plt.plot(losses)
-plt.xlabel("Epoch (#)")
-plt.ylabel("Loss")
-plt.show()
-
-df = pd.DataFrame({'Predictions': pred, "Targets": correct})
-print(df)
+print(f"Accuracy on online test set: {check_accuracy(test_data)*100:.2f}")
+#print(f"Accuracy on local test set: {check_accuracy(localtest_data)*100:.2f}")
