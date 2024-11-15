@@ -26,9 +26,9 @@ correct = []
 input_size = 20
 hidden_size = 512
 num_layers = 2
-num_classes = 7
+num_classes = 2
 learning_rate = 0.002
-num_epochs = 500
+num_epochs = 150
 # Outlier detection threshold (adjust as needed)
 outlier_threshold = 3
 
@@ -72,7 +72,7 @@ model = LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_laye
 dfPath = r"C:/Users/Gio/Documents/Code/Robotics/senior-research-neural-network/online_dataset_training_values.csv"
 df = pd.read_csv(dfPath)
 
-localdfPath = "C:/Users/Gio/Documents/Code/Robotics/senior-research-neural-network/emg_data_classified.csv"
+localdfPath = "C:/Users/Gio/Documents/Code/Robotics/senior-research-neural-network/emg_data_truefalse.csv"
 localdf = pd.read_csv(localdfPath)
 
 # preparing data for training
