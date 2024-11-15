@@ -14,6 +14,7 @@ CLASSIFICATIONS = [1,2,3,4,5,6,7]      # Set the classification label for the cu
 NAMES = ["Index", "Middle", "Ring", "Pinky", "Thumb", "Rest", "Victory"]
 NUM_TRIALS = 10;
 
+
 # Function to calculate features for a single channel
 def calculate_features(data):
     std_dev = np.std(data)
