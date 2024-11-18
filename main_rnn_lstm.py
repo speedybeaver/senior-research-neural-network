@@ -31,6 +31,7 @@ learning_rate = 0.002
 num_epochs = 150
 # Outlier detection threshold (adjust as needed)
 outlier_threshold = 3
+seed = 41
 
 def detect_outliers(data):
     z_scores = np.abs(stats.zscore(data))
@@ -62,7 +63,7 @@ class LSTM(nn.Module):
         out = self.softmaxx(out)
         return out
     
-torch.manual_seed(41)
+torch.manual_seed(seed)
 model = LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, num_classes=num_classes).to(device)
 
 # getting path and reading the csv file for ALL inputs
@@ -84,8 +85,8 @@ dataLocal = localdf.drop("classification", axis=1)
 classLocal = localdf["classification"]
 
 # splitting up the data set
-X_train, X_test, y_train, y_test = train_test_split(dataLocal, classLocal, test_size=0.10, random_state=41)
-# _, x_localtest, _, y_localtest = train_test_split(dataLocal, classLocal, test_size=1.00, random_state=41)
+X_train, X_test, y_train, y_test = train_test_split(dataLocal, classLocal, test_size=0.10, random_state=seed)
+# _, x_localtest, _, y_localtest = train_test_split(dataLocal, classLocal, test_size=1.00, random_state=SEED)
 
 outliers = detect_outliers(X_train)
 mask = ~outliers.any(axis=1)
@@ -125,6 +126,7 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 
 def train():
+    latest_loss = 0;
     for epoch in range(num_epochs):
         print(f'Epoch: {epoch+1}')
         for batch, (data, targets) in enumerate(tqdm(train_data)):
@@ -136,13 +138,13 @@ def train():
             scores = model(data)
 
             loss = criterion(scores, targets)
-            if batch%100 == 0:
-                losses.append(loss.cpu().detach().numpy())
-
+            latest_loss = loss.cpu().detach().numpy()
+            
             # data
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+        losses.append(latest_loss)
     
 def check_accuracy(dataset):
     num_correct = 0
